@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:supabase_learning/screens/home_screen.dart';
+import 'package:note_app/screens/home_screen.dart';
 
 void main() async {
   await Supabase.initialize(
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Learning',
+      title: 'Note App',
       home: HomeScreen(),
     );
   }

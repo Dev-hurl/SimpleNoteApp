@@ -1,4 +1,4 @@
-# supabase_learning
+# note_app
 
 A new Flutter project.
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:note_app/screens/archive_screen.dart';
+import 'package:note_app/screens/deleted_screen.dart';
+import 'package:note_app/screens/note_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:supabase_learning/screens/note_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,9 +74,58 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        leading: DrawerButton(),
         title: Text(
           'Home',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+      ),
+      drawer: Drawer(
+        child: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Text(
+                    'Notes App',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.home_outlined),
+                title: Text(
+                  'Home',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.archive_outlined),
+                title: Text(
+                  'Archive',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ArchiveScreen()),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outlined),
+                title: Text(
+                  'Deleted',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DeletedScreen()),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(

@@ -78,6 +78,7 @@ class _NoteScreenState extends State<NoteScreen> {
         actionsPadding: EdgeInsets.only(right: 16),
         leading: BackButton(),
         actions: [
+          IconButton(onPressed: () {}, icon: Icon(Icons.archive)),
           IconButton(
             onPressed: _isSaving ? null : _saveNote,
             icon: Icon(Icons.save_rounded),
@@ -100,7 +101,6 @@ class _NoteScreenState extends State<NoteScreen> {
             Divider(),
             Expanded(
               child: TextField(
-                
                 controller: _bodyController,
                 focusNode: FocusNode(),
                 autofocus: true,
