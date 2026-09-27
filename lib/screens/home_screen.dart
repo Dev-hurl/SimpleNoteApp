@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:provider/provider.dart';
+import 'package:note_app/core/theme/theme_provider.dart';
 import 'package:note_app/screens/archive_screen.dart';
 import 'package:note_app/screens/deleted_screen.dart';
 import 'package:note_app/screens/note_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +16,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Map<String, dynamic>>> _notesFuture;
+
+  String _formatNoteTimestamp(Map<String, dynamic> note) {
+    final timestamp = note['updated_at'] ?? note['created_at'];
+    if (timestamp == null) return '';
+
+    try {
+      final dateTime = DateTime.parse(timestamp.toString()).toLocal();
+      final localizations = MaterialLocalizations.of(context);
+      final date = localizations.formatShortDate(dateTime);
+      final time = TimeOfDay.fromDateTime(dateTime).format(context);
+      return '$date · $time';
+    } on FormatException {
+      return '';
+    }
+  }
 
   @override
   void initState() {
@@ -47,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete'),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -60,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       _refreshNotes();
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Note deleted.')));
+          .showSnackBar(SnackBar(content: Text('Note deleted.')));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -71,14 +88,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final themeProvider = context.watch<ThemeProvider>();
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         leading: DrawerButton(),
-        title: Text(
-          'Home',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+        title: Text('Home', style: textTheme.titleLarge),
       ),
       drawer: Drawer(
         child: SafeArea(
@@ -88,26 +106,17 @@ class _HomeScreenState extends State<HomeScreen> {
               DrawerHeader(
                 child: Align(
                   alignment: Alignment.bottomLeft,
-                  child: Text(
-                    'Notes App',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
-                  ),
+                  child: Text('Notes App', style: textTheme.titleLarge),
                 ),
               ),
               ListTile(
                 leading: Icon(Icons.home_outlined),
-                title: Text(
-                  'Home',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
+                title: Text('Home', style: textTheme.bodyMedium),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
                 leading: Icon(Icons.archive_outlined),
-                title: Text(
-                  'Archive',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
+                title: Text('Archive', style: textTheme.bodyMedium),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => ArchiveScreen()),
@@ -115,14 +124,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               ListTile(
                 leading: Icon(Icons.delete_outlined),
-                title: Text(
-                  'Deleted',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
+                title: Text('Deleted', style: textTheme.bodyMedium),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => DeletedScreen()),
                 ),
+              ),
+              SwitchListTile(
+                secondary: Icon(
+                  themeProvider.isDarkMode
+                      ? Icons.dark_mode_outlined
+                      : Icons.light_mode_outlined,
+                ),
+                title: Text('Dark mode', style: textTheme.bodyMedium),
+                value: themeProvider.isDarkMode,
+                onChanged: themeProvider.toggleTheme,
               ),
             ],
           ),
@@ -138,16 +154,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text('Error loading notes: ${snapshot.error}'),
                   SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: _refreshNotes,
-                    child: const Text('Retry'),
-                  ),
+                  FilledButton(onPressed: _refreshNotes, child: Text('Retry')),
                 ],
               ),
             );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
 
           final notes = snapshot.data ?? <Map<String, dynamic>>[];
@@ -159,58 +172,97 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: notes.length,
             itemBuilder: (context, index) {
               final note = notes[index];
-              return ListTile(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NoteScreen(
-                        noteId: note['id'],
-                        title: note['title']?.toString() ?? '',
-                        body: note['body']?.toString() ?? '',
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Slidable(
+                    key: ValueKey(note['id']),
+                    startActionPane: ActionPane(
+                      motion: ScrollMotion(),
+                      children: [
+                        SlidableAction(
+                          onPressed: null,
+                          backgroundColor: colorScheme.primary,
+                          icon: Icons.archive_outlined,
+                          label: 'Archive',
+                          spacing: 4,
+                        ),
+                      ],
+                    ),
+                    endActionPane: ActionPane(
+                      motion: ScrollMotion(),
+                      children: [
+                        SlidableAction(
+                          onPressed: (_) => _deleteNote(note['id']),
+                          backgroundColor: colorScheme.error,
+                          icon: Icons.archive_outlined,
+                          label: 'Delete',
+                          padding: EdgeInsets.all(8.0),
+                        ),
+                      ],
+                    ),
+                    child: ListTile(
+                      //tileColor: colorScheme.secondary.withValues(alpha: 0.2),
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NoteScreen(
+                              noteId: note['id'],
+                              title: note['title']?.toString() ?? '',
+                              body: note['body']?.toString() ?? '',
+                            ),
+                          ),
+                        );
+                        if (mounted) _refreshNotes();
+                      },
+                      title: Text(
+                        note['title']?.toString() ?? 'Untitled',
+                        style: textTheme.titleLarge,
+                      ),
+                      subtitle: Text(
+                        note['body']?.toString() ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      trailing: Text(
+                        _formatNoteTimestamp(note),
+                        textAlign: TextAlign.end,
+                        style: textTheme.bodySmall,
                       ),
                     ),
-                  );
-                  if (mounted) _refreshNotes();
-                },
-                title: Text(
-                  note['title']?.toString() ?? 'Untitled',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                ),
-                subtitle: Text(
-                  note['body']?.toString() ?? '',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    overflow: TextOverflow.clip,
                   ),
-                ),
-                trailing: IconButton(
-                  tooltip: 'Delete note',
-                  onPressed: () => _deleteNote(note['id']),
-                  icon: const Icon(Icons.delete_outline),
-                ),
+                  Divider(
+                    height: 1,
+                    indent: 20,
+                    endIndent: 20,
+                    color: Color(0xff656E80),
+                  ),
+                ],
               );
             },
           );
         },
       ),
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const NoteScreen(title: '', body: ''),
-            ),
-          );
-          if (mounted) _refreshNotes();
-        },
-        backgroundColor: Colors.deepOrange,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-        child: Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: 40, right: 12),
+        child: FloatingActionButton(
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoteScreen(title: '', body: ''),
+              ),
+            );
+            if (mounted) _refreshNotes();
+          },
+          child: Icon(Icons.add),
+        ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

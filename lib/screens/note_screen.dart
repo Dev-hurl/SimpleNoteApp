@@ -36,7 +36,13 @@ class _NoteScreenState extends State<NoteScreen> {
 
     setState(() => _isSaving = true);
     try {
-      final values = {'title': title, 'body': description};
+      final now = DateTime.now().toUtc().toIso8601String();
+      final values = {
+        'title': title,
+        'body': description,
+        if (widget.noteId == null) 'created_at': now,
+        'updated_at': now,
+      };
 
       final notes = Supabase.instance.client.from('notes');
       if (widget.noteId == null) {
@@ -73,6 +79,9 @@ class _NoteScreenState extends State<NoteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         actionsPadding: EdgeInsets.only(right: 16),
@@ -92,13 +101,16 @@ class _NoteScreenState extends State<NoteScreen> {
             TextField(
               controller: _titleController,
               maxLines: 1,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: textTheme.titleLarge,
               decoration: InputDecoration(
                 hintText: 'Title',
+                hintStyle: textTheme.titleLarge?.copyWith(
+                  color: colorScheme.secondary.withValues(alpha: 0.7),
+                ),
                 border: InputBorder.none,
               ),
             ),
-            Divider(),
+            Divider(color: colorScheme.onSurface),
             Expanded(
               child: TextField(
                 controller: _bodyController,
@@ -109,9 +121,15 @@ class _NoteScreenState extends State<NoteScreen> {
                 minLines: null,
                 textAlignVertical: TextAlignVertical.top,
                 keyboardType: TextInputType.multiline,
-                style: TextStyle(fontSize: 14, height: 1.5),
+                style: textTheme.bodyLarge?.copyWith(
+                  height: 1.5,
+                  fontWeight: FontWeight.w600,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Start writing your note...',
+                  hintStyle: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.secondary.withValues(alpha: 0.7),
+                  ),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                 ),
